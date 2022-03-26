@@ -17,6 +17,10 @@ eval_scenario の終了後は、元のシナリオに続きに復帰します。
 
 https://www.youtube.com/watch?v=droNDtFYdyc
 
+## 解説記事
+
+https://note.com/9min_packup/n/nd7b1f99a059e
+
 ## 導入
 
 1. このリポジトリをダウンロードします。（右上の[code]ボタン->[Download Zip] で）
