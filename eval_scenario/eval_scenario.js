@@ -9,7 +9,18 @@ TYRANO.kag.stat.f.eval_scenario.eval_scenario = "";
 TYRANO.kag.eval_scenario = {};
 
 //文字列に書かれたシナリオを無理やり実行する
-TYRANO.kag.eval_scenario.evalScenario = function (scenario_text) {
+TYRANO.kag.eval_scenario.evalScenario = function (
+    scenario_text,
+    storage = undefined,
+    target = undefined
+) {
+    if (target) {
+        if (!storage) {
+            storage = TYRANO.kag.stat.current_scenario;
+        }
+        scenario_text +=
+            "\n[es_jump storage='" + storage + "' target='" + target + "' ]\n";
+    }
     scenario_text += "\n[end_eval_scenario]\n";
     TYRANO.kag.stat.f.eval_scenario.eval_scenario = scenario_text;
     if (!TYRANO.kag.stat.f.eval_scenario.isDoing) {
@@ -44,8 +55,7 @@ TYRANO.kag.eval_scenario.endEvalScenario = function () {
             val: "",
         };
         TYRANO.kag.ftag.nextOrderWithIndex(
-            TYRANO.kag.stat.f.eval_scenario.base_scenario_current_order_index -
-                1,
+            TYRANO.kag.stat.f.eval_scenario.base_scenario_current_order_index,
             TYRANO.kag.stat.f.eval_scenario.base_scenario_name,
             true,
             insert,
@@ -407,12 +417,18 @@ TYRANO.kag.menu.loadGameData = function (data, options) {
     TYRANO.kag.tag.eval_scenario = {
         vital: ["exp"],
         pm: {
-            scenario: "",
+            exp: "",
+            storage: null,
+            target: null,
         },
         start: function (pm) {
             console.log(pm.exp);
-            let result = "" + this.kag.embScript(pm.exp);
-            TYRANO.kag.eval_scenario.evalScenario(result);
+            let result = "" + TYRANO.kag.embScript(pm.exp);
+            TYRANO.kag.eval_scenario.evalScenario(
+                result,
+                pm.storage,
+                pm.target
+            );
         },
     };
     TYRANO.kag.ftag.master_tag.eval_scenario = object(
@@ -434,4 +450,595 @@ TYRANO.kag.menu.loadGameData = function (data, options) {
         TYRANO.kag.tag.end_eval_scenario
     );
     TYRANO.kag.ftag.master_tag.end_eval_scenario.kag = TYRANO.kag;
+})();
+
+//es_jump : eval_scenario中に使えるジャンプ命令。storageが指定されていれば、eval_scenarioを強制終了し、targetに飛ぶ。
+(function () {
+    TYRANO.kag.tag.es_jump = {
+        pm: {
+            storage: null,
+            target: null, //ラベル名
+            countpage: true,
+        },
+
+        start: function (pm) {
+            var that = this;
+            //ジャンプ直後のwt などでフラグがおかしくなる対策
+            setTimeout(function () {
+                if (TYRANO.kag.stat.f.eval_scenario.isDoing) {
+                    TYRANO.kag.stat.f.eval_scenario.isDoing = false;
+                    TYRANO.kag.stat.f.eval_scenario.eval_scenario = "";
+                    TYRANO.kag.stat.f.eval_scenario.base_scenario_name = "";
+                    TYRANO.kag.stat.f.eval_scenario.base_scenario_current_order_index = 0;
+                    if (pm.storage) {
+                        TYRANO.kag.stat.current_scenario = null;
+                    }
+                }
+                TYRANO.kag.ftag.nextOrderWithLabel(pm.target, pm.storage);
+            }, 1);
+        },
+    };
+    TYRANO.kag.ftag.master_tag.es_jump = object(TYRANO.kag.tag.es_jump);
+    TYRANO.kag.ftag.master_tag.es_jump.kag = TYRANO.kag;
+})();
+
+//es_glink : glink の eval_scenario バージョン
+(function () {
+    TYRANO.kag.tag.es_glink = {
+        pm: {
+            color: "black", //クラス名でいいよ
+            font_color: "",
+            storage: null,
+            target: null,
+            name: "",
+            text: "",
+            x: "auto",
+            y: "",
+            width: "",
+            height: "",
+            size: 30,
+            graphic: "",
+            enterimg: "",
+            cm: "true",
+            clickse: "",
+            enterse: "",
+            leavese: "",
+            face: "",
+            exp: "",
+        },
+
+        //イメージ表示レイヤ。メッセージレイヤのように扱われますね。。
+        //cmで抹消しよう
+        start: function (pm) {
+            var that = TYRANO;
+            var target_layer = null;
+            target_layer = TYRANO.kag.layer.getFreeLayer();
+            target_layer.css("z-index", 999999);
+
+            var j_button = $("<div class='glink_button'>" + pm.text + "</div>");
+            j_button.css("position", "absolute");
+            j_button.css("cursor", "pointer");
+            j_button.css("z-index", 99999999);
+            j_button.css("font-size", pm.size + "px");
+
+            if (pm.font_color != "") {
+                j_button.css("color", $.convertColor(pm.font_color));
+            }
+
+            if (pm.height != "") {
+                j_button.css("height", pm.height + "px");
+            }
+
+            if (pm.width != "") {
+                j_button.css("width", pm.width + "px");
+            }
+
+            //graphic 背景画像を指定できます。
+            if (pm.graphic != "") {
+                //画像の読み込み
+
+                j_button.removeClass("glink_button").addClass("button_graphic");
+                var img_url = "./data/image/" + pm.graphic;
+                j_button.css("background-image", "url(" + img_url + ")");
+                j_button.css("background-repeat", "no-repeat");
+                j_button.css("background-position", "center center");
+                j_button.css("background-size", "100% 100%");
+            } else {
+                j_button.addClass(pm.color);
+            }
+
+            if (pm.face != "") {
+                j_button.css("font-family", pm.face);
+            } else if (that.kag.stat.font.face != "") {
+                j_button.css("font-family", that.kag.stat.font.face);
+            }
+
+            if (pm.x == "auto") {
+                var sc_width = parseInt(that.kag.config.scWidth);
+                var center = Math.floor(parseInt(j_button.css("width")) / 2);
+                var base = Math.floor(sc_width / 2);
+                var first_left = base - center;
+                j_button.css("left", first_left + "px");
+            } else if (pm.x == "") {
+                j_button.css("left", TYRANO.kag.stat.locate.x + "px");
+            } else {
+                j_button.css("left", pm.x + "px");
+            }
+
+            if (pm.y == "") {
+                j_button.css("top", TYRANO.kag.stat.locate.y + "px");
+            } else {
+                j_button.css("top", pm.y + "px");
+            }
+
+            //オブジェクトにクラス名をセットします
+            $.setName(j_button, pm.name);
+
+            that.kag.event.addEventElement({
+                tag: "glink",
+                j_target: j_button, //イベント登録先の
+                pm: pm,
+            });
+            this.setEvent(j_button, pm);
+
+            target_layer.append(j_button);
+            target_layer.show();
+            this.kag.ftag.nextOrder();
+        },
+
+        setEvent: function (j_button, pm) {
+            var that = TYRANO;
+
+            (function () {
+                var _target = pm.target;
+                var _storage = pm.storage;
+                var _pm = pm;
+                var preexp = that.kag.embScript(pm.preexp);
+                var button_clicked = false;
+
+                j_button.click(function (e) {
+                    //クリックされた時に音が指定されていたら
+                    if (_pm.clickse != "") {
+                        that.kag.ftag.startTag("playse", {
+                            storage: _pm.clickse,
+                            stop: true,
+                        });
+                    }
+
+                    //Sタグに到達していないとクリッカブルが有効にならない fixの時は実行される必要がある
+                    if (that.kag.stat.is_strong_stop != true) {
+                        return false;
+                    }
+
+                    button_clicked = true;
+
+                    if (_pm.exp != "") {
+                        //eval_scenario実行
+                        let result = "" + TYRANO.kag.embScript(_pm.exp);
+                        TYRANO.kag.eval_scenario.evalScenario(
+                            result,
+                            _storage,
+                            _target
+                        );
+                    }
+
+                    if (pm.cm == "true") {
+                        that.kag.ftag.startTag("cm", {});
+                    }
+
+                    //選択肢の後、スキップを継続するか否か
+                    if (that.kag.stat.skip_link == "true") {
+                        e.stopPropagation();
+                    } else {
+                        that.kag.stat.is_skip = false;
+                    }
+                });
+
+                j_button.hover(
+                    function () {
+                        if (_pm.enterimg != "") {
+                            var enterimg_url = "./data/image/" + _pm.enterimg;
+                            j_button.css(
+                                "background-image",
+                                "url(" + enterimg_url + ")"
+                            );
+                        }
+
+                        //マウスが乗った時
+                        if (_pm.enterse != "") {
+                            that.kag.ftag.startTag("playse", {
+                                storage: _pm.enterse,
+                                stop: true,
+                            });
+                        }
+                    },
+                    function () {
+                        if (_pm.enterimg != "") {
+                            var img_url = "./data/image/" + _pm.graphic;
+                            j_button.css(
+                                "background-image",
+                                "url(" + img_url + ")"
+                            );
+                        }
+                        //マウスが乗った時
+                        if (_pm.leavese != "") {
+                            that.kag.ftag.startTag("playse", {
+                                storage: _pm.leavese,
+                                stop: true,
+                            });
+                        }
+                    }
+                );
+            })();
+        },
+    };
+    TYRANO.kag.ftag.master_tag.es_glink = object(TYRANO.kag.tag.es_glink);
+    TYRANO.kag.ftag.master_tag.es_glink.kag = TYRANO.kag;
+})();
+
+//es_button : button の eval_scenario バージョン。role, savesnap パラメータは存在しません。
+(function () {
+    TYRANO.kag.tag.es_button = {
+        pm: {
+            graphic: "",
+            storage: null,
+            target: null,
+            ext: "",
+            name: "",
+            x: "",
+            y: "",
+            width: "",
+            height: "",
+            fix: "false" /*ここがtrueの場合、システムボタンになりますね*/,
+            folder: "image",
+            exp: "",
+            prevar: "",
+            visible: "true",
+            hint: "",
+            clickse: "",
+            enterse: "",
+            leavese: "",
+            clickimg: "",
+            enterimg: "",
+
+            auto_next: "yes",
+        },
+
+        //イメージ表示レイヤ。メッセージレイヤのように扱われますね。。
+        //cmで抹消しよう
+        start: function (pm) {
+            var that = TYRANO;
+
+            var target_layer = null;
+
+            if (pm.fix == "false") {
+                target_layer = this.kag.layer.getFreeLayer();
+                target_layer.css("z-index", 999999);
+            } else {
+                target_layer = this.kag.layer.getLayer("fix");
+            }
+
+            var storage_url = "";
+
+            if ($.isHTTP(pm.graphic)) {
+                storage_url = pm.graphic;
+            } else {
+                storage_url = "./data/" + pm.folder + "/" + pm.graphic;
+            }
+
+            var j_button = $("<img />");
+            j_button.attr("src", storage_url);
+            j_button.css("position", "absolute");
+            j_button.css("cursor", "pointer");
+            j_button.css("z-index", 99999999);
+
+            //初期状態で表示か非表示か
+            if (pm.visible == "true") {
+                j_button.show();
+            } else {
+                j_button.hide();
+            }
+
+            if (pm.x == "") {
+                j_button.css("left", this.kag.stat.locate.x + "px");
+            } else {
+                j_button.css("left", pm.x + "px");
+            }
+
+            if (pm.y == "") {
+                j_button.css("top", this.kag.stat.locate.y + "px");
+            } else {
+                j_button.css("top", pm.y + "px");
+            }
+
+            if (pm.fix != "false") {
+                j_button.addClass("fixlayer");
+            }
+
+            if (pm.width != "") {
+                j_button.css("width", pm.width + "px");
+            }
+
+            if (pm.height != "") {
+                j_button.css("height", pm.height + "px");
+            }
+
+            //ツールチップの設定
+            if (pm.hint != "") {
+                j_button.attr({
+                    title: pm.hint,
+                    alt: pm.hint,
+                });
+            }
+
+            //オブジェクトにクラス名をセットします
+            $.setName(j_button, pm.name);
+
+            //クラスとイベントを登録する
+            that.kag.event.addEventElement({
+                tag: "button",
+                j_target: j_button, //イベント登録先の
+                pm: pm,
+            });
+            this.setEvent(j_button, pm);
+
+            target_layer.append(j_button);
+
+            if (pm.fix == "false") {
+                target_layer.show();
+            }
+
+            this.kag.ftag.nextOrder();
+        },
+
+        setEvent: function (j_button, pm) {
+            var that = TYRANO;
+
+            (function () {
+                var _target = pm.target;
+                var _storage = pm.storage;
+                var _pm = pm;
+
+                var preexp = that.kag.embScript(pm.preexp);
+                var button_clicked = false;
+
+                j_button.hover(
+                    function () {
+                        //マウスが乗った時
+                        if (_pm.enterse != "") {
+                            that.kag.ftag.startTag("playse", {
+                                storage: _pm.enterse,
+                                stop: true,
+                            });
+                        }
+
+                        if (_pm.enterimg != "") {
+                            var enter_img_url = "";
+                            if ($.isHTTP(_pm.enterimg)) {
+                                enter_img_url = _pm.enterimg;
+                            } else {
+                                enter_img_url =
+                                    "./data/" + _pm.folder + "/" + _pm.enterimg;
+                            }
+
+                            $(this).attr("src", enter_img_url);
+                        }
+                    },
+                    function () {
+                        //マウスが外れた時
+                        if (_pm.leavese != "") {
+                            that.kag.ftag.startTag("playse", {
+                                storage: _pm.leavese,
+                                stop: true,
+                            });
+                        }
+
+                        //元に戻す
+                        if (_pm.enterimg != "") {
+                            var enter_img_url = "";
+                            if ($.isHTTP(_pm.graphic)) {
+                                enter_img_url = _pm.graphic;
+                            } else {
+                                enter_img_url =
+                                    "./data/" + _pm.folder + "/" + _pm.graphic;
+                            }
+
+                            $(this).attr("src", enter_img_url);
+                        }
+                    }
+                );
+
+                j_button.click(function (event) {
+                    if (_pm.clickimg != "") {
+                        var click_img_url = "";
+                        if ($.isHTTP(_pm.clickimg)) {
+                            click_img_url = _pm.clickimg;
+                        } else {
+                            click_img_url =
+                                "./data/" + _pm.folder + "/" + _pm.clickimg;
+                        }
+
+                        j_button.attr("src", click_img_url);
+                    }
+
+                    //fix指定のボタンは、繰り返し実行できるようにする
+                    if (button_clicked == true && _pm.fix == "false") {
+                        return false;
+                    }
+
+                    //Sタグに到達していないとクリッカブルが有効にならない fixの時は実行される必要がある
+                    if (
+                        that.kag.stat.is_strong_stop != true &&
+                        _pm.fix == "false"
+                    ) {
+                        return false;
+                    }
+
+                    button_clicked = true;
+
+                    if (_pm.exp != "") {
+                        //eval_scenario実行
+                        let result = "" + TYRANO.kag.embScript(_pm.exp);
+                        TYRANO.kag.eval_scenario.evalScenario(
+                            result,
+                            _storage,
+                            _target
+                        );
+                    }
+
+                    if (_pm.fix == "false") {
+                        that.kag.ftag.startTag("cm", {});
+                    }
+
+                    //画面効果中は実行できないようにする
+                    if (
+                        that.kag.layer.layer_event.css("display") == "none" &&
+                        that.kag.stat.is_strong_stop != true
+                    ) {
+                        return false;
+                    }
+
+                    //クリックされた時に音が指定されていたら
+                    if (_pm.clickse != "") {
+                        that.kag.ftag.startTag("playse", {
+                            storage: _pm.clickse,
+                            stop: true,
+                        });
+                    }
+
+                    //選択肢の後、スキップを継続するか否か
+                    if (that.kag.stat.skip_link == "true") {
+                        event.stopPropagation();
+                    } else {
+                        that.kag.stat.is_skip = false;
+                    }
+                });
+            })();
+        },
+    };
+    TYRANO.kag.ftag.master_tag.es_button = object(TYRANO.kag.tag.es_button);
+    TYRANO.kag.ftag.master_tag.es_button.kag = TYRANO.kag;
+})();
+
+//es_clickable : clickable の eval_scenario バージョン。exp パラメータが追加されている。
+(function () {
+    TYRANO.kag.tag.es_clickable = {
+        vital: ["width", "height"],
+
+        pm: {
+            width: "0",
+            height: "0",
+            x: "",
+            y: "",
+            border: "none",
+            color: "",
+            mouseopacity: "",
+            opacity: "140",
+            storage: null,
+            target: null,
+            name: "",
+            exp: "",
+        },
+
+        //イメージ表示レイヤ。メッセージレイヤのように扱われますね。。
+        //cmで抹消しよう
+        start: function (pm) {
+            var that = TYRANO;
+
+            //this.kag.stat.locate.x
+            var layer_free = this.kag.layer.getFreeLayer();
+
+            layer_free.css("z-index", 9999999);
+
+            var j_button = $("<div />");
+            j_button.css("position", "absolute");
+            j_button.css("cursor", "pointer");
+            j_button.css("top", this.kag.stat.locate.y + "px");
+            j_button.css("left", this.kag.stat.locate.x + "px");
+            j_button.css("width", pm.width + "px");
+            j_button.css("height", pm.height + "px");
+            j_button.css("opacity", $.convertOpacity(pm.opacity));
+            j_button.css("background-color", $.convertColor(pm.color));
+            j_button.css("border", $.replaceAll(pm.border, ":", " "));
+
+            //alert($.replaceAll(pm.border,":"," "));
+
+            //x,y 座標が指定されている場合は、そっちを採用
+            if (pm.x != "") {
+                j_button.css("left", parseInt(pm.x));
+            }
+
+            if (pm.y != "") {
+                j_button.css("top", parseInt(pm.y));
+            }
+
+            //クラスとイベントを登録する
+            that.kag.event.addEventElement({
+                tag: "clickable",
+                j_target: j_button, //イベント登録先の
+                pm: pm,
+            });
+
+            this.setEvent(j_button, pm);
+
+            layer_free.append(j_button);
+            layer_free.show();
+
+            this.kag.ftag.nextOrder();
+        },
+
+        setEvent: function (j_button, pm) {
+            var that = TYRANO;
+
+            (function () {
+                var _target = pm.target;
+                var _storage = pm.storage;
+                var _pm = pm;
+
+                if (_pm.mouseopacity != "") {
+                    j_button.bind("mouseover", function () {
+                        j_button.css(
+                            "opacity",
+                            $.convertOpacity(_pm.mouseopacity)
+                        );
+                    });
+
+                    j_button.bind("mouseout", function () {
+                        j_button.css("opacity", $.convertOpacity(_pm.opacity));
+                    });
+                }
+
+                j_button.click(function () {
+                    //Sタグに到達していないとクリッカブルが有効にならない
+
+                    var is_s = (function (obj) {
+                        if (obj.kag.stat.is_strong_stop != true) {
+                            return false;
+                        }
+
+                        return true;
+                    })(that);
+
+                    if (is_s == false) {
+                        return false;
+                    }
+
+                    that.kag.ftag.startTag("cm", {});
+                    if (_pm.exp != "") {
+                        //eval_scenario実行
+                        let result = "" + TYRANO.kag.embScript(_pm.exp);
+                        TYRANO.kag.eval_scenario.evalScenario(
+                            result,
+                            _storage,
+                            _target
+                        );
+                    }
+                });
+            })();
+        },
+    };
+    TYRANO.kag.ftag.master_tag.es_clickable = object(
+        TYRANO.kag.tag.es_clickable
+    );
+    TYRANO.kag.ftag.master_tag.es_clickable.kag = TYRANO.kag;
 })();
