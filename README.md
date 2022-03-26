@@ -95,7 +95,7 @@ eval_scenario の終了後は、元のシナリオに続きに復帰します。
 
 ## ライセンス
 
-MIT Licecnse
+MIT License
 
 ## コピーライト
 
