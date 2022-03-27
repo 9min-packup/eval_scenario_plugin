@@ -15,11 +15,19 @@ eval_scenario の終了後は、元のシナリオに続きに復帰します。
 
 ## 更新履歴
 
+2022/03/27 サンプルゲームを追加しました。
 2022/03/26 タグを追加しました。
 
 ## デモ
 
 https://www.youtube.com/watch?v=droNDtFYdyc
+
+## サンプルゲーム
+
+"es_samplegame"フォルダの中身は、eval_plugin を利用したサンプルゲームです。（デモ動画とは違うものです）
+↓ サンプルゲーム動画
+
+https://www.youtube.com/watch?v=bFivL_YD0X8
 
 ## 解説記事
 
