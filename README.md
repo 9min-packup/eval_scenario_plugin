@@ -27,9 +27,14 @@ https://www.youtube.com/watch?v=droNDtFYdyc
 ## サンプルゲーム
 
 "es_samplegame"フォルダの中身は、eval_scenarioプラグインを利用したサンプルゲームです。（デモ動画とは違うものです）
+
 ↓ サンプルゲーム動画
 
 https://www.youtube.com/watch?v=bFivL_YD0X8
+
+↓ サンプルゲームに関する記事（大したことはない）
+
+https://note.com/9min_packup/n/n01f7f2ca7b43
 
 ## 解説記事
 
