@@ -13,6 +13,8 @@
 
 eval_scenario の終了後は、元のシナリオに続きに復帰します。
 
+[!]eval_scenario内では、サブルーチンとマクロは使えません。ご了承ください。
+
 ## 更新履歴
 
 2022/03/28 eval_scenario 中に eval_scenario した際の不具合を修正しました。
