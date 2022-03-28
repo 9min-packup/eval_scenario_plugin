@@ -178,28 +178,24 @@
 
     let bg = function (){
         let storage = f.bg_list[rand_range(0, f.bg_list.length - 1)];
-        return "[bg storage='"+ storage +"' time='100']"
+        return "[bg storage='"+ storage +"' time='100']\n"
     }
 
     f.scenario = "";
     f.sub_scenario = "";
-
-    console.log( "akane_in :  " + f.akane_in );
-    console.log( "yamato_in :  " + f.yamato_in );
-    console.log( "call :  " + f.call_dareka );
 
     if(rand_range(0,8) == 8 ){
         f.scenario += bg();
     }
 
     if ( f.akane_in == false && f.yamato_in == false && f.call_dareka == false) {
-        f.sub_scenario = "[showmenubutton]";
+        f.sub_scenario = "";
         f.call_dareka = true;
         let a = rand_range(0,1);
         if(a == 0) {
-           f.scenario = "[hidemenubutton][es_glink  color='blue'  size='28'  x='360'  width='500'  y='250'  text='おーい！' exp='f.sub_scenario' storage='scene1.ks'  target='*auto_scenario' ]\n[s]";
+           f.scenario = "[es_glink  color='blue'  size='28'  x='360'  width='500'  y='250'  text='おーい！' exp='f.sub_scenario' storage='scene1.ks'  target='*auto_scenario' ]\n[s]";
         } else {
-           f.scenario = "[hidemenubutton][es_glink  color='blue'  size='28'  x='360'  width='500'  y='250'  text='...誰かおる？' exp='f.sub_scenario' storage='scene1.ks'  target='*auto_scenario' ]\n[s]";
+           f.scenario = "[es_glink  color='blue'  size='28'  x='360'  width='500'  y='250'  text='...誰かおる？' exp='f.sub_scenario' storage='scene1.ks'  target='*auto_scenario' ]\n[s]";
         }
     } else if ( f.akane_in == false && f.yamato_in == false && f.call_dareka == true) {
         let a = rand_range(0,1);

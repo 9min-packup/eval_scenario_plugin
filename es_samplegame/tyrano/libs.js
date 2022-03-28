@@ -62,6 +62,20 @@
 		return angle; 
 	
 	};
+	
+	//横幅の方が大きければtrue;
+	$.getLargeScreenWidth = function(){
+        
+        let w = parseInt(window.innerWidth);
+        let h = parseInt(window.innerHeight);
+        
+        if(w>h){
+            return true;
+        }else{
+            return false;
+        }
+        
+    };
 
     $.localFilePath = function(){
         
@@ -854,7 +868,12 @@
     $.setStorageWeb = function(key, val) {
         val = JSON.stringify(val);
         //localStorage.setItem(key, LZString.compress(escape(val)));
-        localStorage.setItem(key, escape(val));
+        try{
+            localStorage.setItem(key, escape(val));
+        }catch(e){
+            console.error("セーブデータ。localstorageが利用できません。");
+            return;
+        }
     };
 
     $.getStorageWeb = function(key) {
@@ -872,8 +891,11 @@
                 return null;
 
         } catch(e) {
-            alert("この環境はセーブ機能を利用できません。ローカルで実行している場合などに発生します");
-            $.confirmSaveClear();
+            //alert("この環境はセーブ機能を利用できません。ローカルで実行している場合などに発生します");
+            //$.confirmSaveClear();
+            
+            console.error("セーブデータ。localstorageが利用できません。");
+            return null;
         }
 
         return gv;

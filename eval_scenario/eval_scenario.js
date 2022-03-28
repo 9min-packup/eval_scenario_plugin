@@ -14,6 +14,8 @@ TYRANO.kag.eval_scenario.evalScenario = function (
     storage = undefined,
     target = undefined
 ) {
+    //安定化のためにwaitを挟む
+    scenario_text = "[wait time='1']" + scenario_text;
     if (target) {
         if (!storage) {
             storage = TYRANO.kag.stat.current_scenario;
@@ -29,7 +31,6 @@ TYRANO.kag.eval_scenario.evalScenario = function (
         TYRANO.kag.stat.f.eval_scenario.base_scenario_current_order_index =
             TYRANO.kag.ftag.current_order_index;
     }
-    TYRANO.kag.stat.is_strong_stop = false;
 
     let result_obj = TYRANO.kag.parser.parseScenario(scenario_text);
     let tag_obj = result_obj.array_s;
